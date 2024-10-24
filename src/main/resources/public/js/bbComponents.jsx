@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
     <Editor name="Ricardo" />
@@ -26,7 +28,7 @@ function BBCanvas() {
     };
 
     React.useEffect(() => {
-        myp5.current = new p5(sketch, 'container');
+        myp5.current = new P5(sketch, 'container');
         setSvrStatus({ loadingState: 'Canvas Loaded' });
         comunicationWS.current = new WSBBChannel(BBServiceURL(), (msg) => {
             const obj = JSON.parse(msg);
@@ -66,6 +68,10 @@ function Editor({ name }) {
         </div>
     );
 }
+
+Editor.propTypes = {
+    name: PropTypes.string.isRequired,
+};
 
 // Returns the service URL. This is a configuration function.
 function BBServiceURL() {
