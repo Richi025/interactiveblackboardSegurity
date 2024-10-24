@@ -11,8 +11,6 @@ function BBCanvas() {
     const comunicationWS = React.useRef(null);
     const myp5 = React.useRef(null);
     const sketch = function (p) {
-        let x = 100;
-        let y = 100;
         p.setup = function () {
             p.createCanvas(700, 410);
         }
