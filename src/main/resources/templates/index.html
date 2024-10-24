@@ -1,33 +1,187 @@
 <!DOCTYPE html>
 <html lang="en" xml:lang="en">
-
 <head>
     <title>Interactive BB</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Load P5.js. -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.1/p5.min.js">
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.1/addons/p5.dom.min.js">
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.1/addons/p5.sound.min.js">
-    </script>
+
+    <!-- Load React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Load Babel -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <!-- Load P5.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.1/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.1/addons/p5.dom.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.1/addons/p5.sound.min.js"></script>
+
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body>
-    <div id="root"></div>
-    <!-- Load React. -->
-    <!-- Note: when deploying, replace "development.js" with "production.min.js". -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin>
-    </script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <!-- Load babel to translate JSX to js. -->
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-    <!-- Load our React component. -->
-    <script src="/js/bbComponents.jsx" type="text/babel"></script>
-</body>
-    <form th:action="@{/logout}" method="post">
-        <input type="submit" value="Sign Out"/>
+    <div id="root">
+        <!-- Mensaje de carga para debugging -->
+        <p>Loading React components...</p>
+    </div>
+
+    <form th:action="@{/logout}" method="post" class="p-4">
+        <input type="submit" value="Sign Out" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"/>
     </form>
 
+    <!-- Componentes de React inline para prueba -->
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function BBCanvas() {
+            const [svrStatus, setSvrStatus] = useState({
+                loadingState: 'Loading Canvas...'
+            });
+            const comunicationWS = useRef(null);
+            const myp5 = useRef(null);
+            
+            const sketch = function (p) {
+                p.setup = function () {
+                    p.createCanvas(700, 410);
+                    p.background(255);
+                }
+                
+                p.draw = function () {
+                    if (p.mouseIsPressed) {
+                        p.fill(0);
+                        p.noStroke();
+                        p.ellipse(p.mouseX, p.mouseY, 20, 20);
+                        if (comunicationWS.current) {
+                            comunicationWS.current.send(p.mouseX, p.mouseY);
+                        }
+                    }
+                }
+            };
+
+            useEffect(() => {
+                console.log("BBCanvas mounted");
+                const container = document.getElementById('container');
+                if (!container) {
+                    console.error("Container not found");
+                    return;
+                }
+
+                try {
+                    myp5.current = new p5(sketch, container);
+                    setSvrStatus({ loadingState: 'Canvas Loaded' });
+                    
+                    comunicationWS.current = new WSBBChannel(BBServiceURL(), (msg) => {
+                        const obj = JSON.parse(msg);
+                        console.log("On func call back ", msg);
+                        if (myp5.current) {
+                            drawPoint(obj.x, obj.y);
+                        }
+                    });
+                } catch (error) {
+                    console.error("Error in BBCanvas setup:", error);
+                    setSvrStatus({ loadingState: 'Error: ' + error.message });
+                }
+
+                return () => {
+                    if (comunicationWS.current) comunicationWS.current.close();
+                    if (myp5.current) myp5.current.remove();
+                };
+            }, []);
+
+            function drawPoint(x, y) {
+                if (myp5.current) {
+                    myp5.current.fill(0);
+                    myp5.current.noStroke();
+                    myp5.current.ellipse(x, y, 20, 20);
+                }
+            }
+
+            return (
+                <div>
+                    <h4>Drawing status: {svrStatus.loadingState}</h4>
+                </div>
+            );
+        }
+
+        function Editor({ name }) {
+            console.log("Rendering Editor with name:", name);
+            return (
+                <div className="p-4">
+                    <h1 className="text-2xl mb-4">Hello, Mr. {name}</h1>
+                    <hr className="my-4" />
+                    <div id="toolstatus"></div>
+                    <hr className="my-4" />
+                    <div id="container"></div>
+                    <hr className="my-4" />
+                    <div id="info"></div>
+                    <BBCanvas />
+                </div>
+            );
+        }
+
+        class WSBBChannel {
+            constructor(URL, callback) {
+                this.URL = URL;
+                this.wsocket = new WebSocket(URL);
+                this.wsocket.onopen = (evt) => this.onOpen(evt);
+                this.wsocket.onmessage = (evt) => this.onMessage(evt);
+                this.wsocket.onerror = (evt) => this.onError(evt);
+                this.receivef = callback;
+            }
+
+            onOpen(evt) {
+                console.log("WS Connected");
+            }
+
+            onMessage(evt) {
+                if (evt.data !== "Connection established.") {
+                    this.receivef(evt.data);
+                }
+            }
+
+            onError(evt) {
+                console.error("WS Error:", evt);
+            }
+
+            send(x, y) {
+                const msg = JSON.stringify({ x, y });
+                this.wsocket.send(msg);
+            }
+
+            close() {
+                if (this.wsocket) {
+                    this.wsocket.close();
+                }
+            }
+        }
+
+        function BBServiceURL() {
+            const host = window.location.host;
+            return `ws://${host}/bbService`;
+        }
+
+        // Función de inicialización
+        function init() {
+            console.log("Initializing React application...");
+            try {
+                const root = ReactDOM.createRoot(document.getElementById("root"));
+                root.render(
+                    <Editor name="Ricardo" />
+                );
+                console.log("React application initialized");
+            } catch (error) {
+                console.error("Error initializing React:", error);
+            }
+        }
+
+        // Esperar a que todo esté cargado
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", init);
+        } else {
+            init();
+        }
+    </script>
+</body>
 </html>
