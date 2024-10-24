@@ -28,7 +28,7 @@ function BBCanvas() {
     };
 
     React.useEffect(() => {
-        myp5.current = new P5(sketch, 'container');
+        myp5.current = new p5(sketch, 'container');
         setSvrStatus({ loadingState: 'Canvas Loaded' });
         comunicationWS.current = new WSBBChannel(BBServiceURL(), (msg) => {
             const obj = JSON.parse(msg);
