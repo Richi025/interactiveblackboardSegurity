@@ -1,4 +1,7 @@
+import React from 'react';
+import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
+import p5 from 'p5';
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -11,23 +14,23 @@ function BBCanvas() {
     });
     const comunicationWS = React.useRef(null);
     const myp5 = React.useRef(null);
-    
-    const sketch = function (p) {
-        p.setup = function () {
-            p.createCanvas(700, 410);
-        };
-        p.draw = function () {
-            if (p.mouseIsPressed) {
-                p.fill(0, 0, 0);
-                p.ellipse(p.mouseX, p.mouseY, 20, 20);
-                comunicationWS.current.send(p.mouseX, p.mouseY);
-            } else {
-                p.fill(255, 255, 255);
-            }
-        };
-    };
 
     React.useEffect(() => {
+        const sketch = (p) => {
+            p.setup = function () {
+                p.createCanvas(700, 410);
+            };
+            p.draw = function () {
+                if (p.mouseIsPressed) {
+                    p.fill(0, 0, 0);
+                    p.ellipse(p.mouseX, p.mouseY, 20, 20);
+                    comunicationWS.current.send(p.mouseX, p.mouseY);
+                } else {
+                    p.fill(255, 255, 255);
+                }
+            };
+        };
+
         myp5.current = new p5(sketch, 'container');
         setSvrStatus({ loadingState: 'Canvas Loaded' });
         comunicationWS.current = new WSBBChannel(BBServiceURL(), (msg) => {
@@ -41,7 +44,7 @@ function BBCanvas() {
             comunicationWS.current.close();
         };
     }, []);
-    
+
     function drawPoint(x, y) {
         myp5.current.ellipse(x, y, 20, 20);
     }
@@ -73,7 +76,6 @@ Editor.propTypes = {
     name: PropTypes.string.isRequired,
 };
 
-// Returns the service URL. This is a configuration function.
 function BBServiceURL() {
     const host = window.location.host;
     console.log("Host: " + host);
@@ -98,7 +100,6 @@ class WSBBChannel {
 
     onMessage(evt) {
         console.log("In onMessage", evt);
-        // Ignore the first message confirming the connection
         if (evt.data !== "Connection established.") {
             this.receivef(evt.data);
         }
