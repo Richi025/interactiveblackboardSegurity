@@ -64,12 +64,18 @@ public class BBEndpoint {
     }
 
     @OnError
-    public void error(Session session, Throwable t) {
-        if (session.isOpen()) {
-            queue.remove(session);
-            logger.error("Connection error: {}", t.toString());
-        } else {
-            logger.warn("Session is not open. No action taken for error: {}", t.toString());
-        }
+public void error(Session session, Throwable t) {
+    // Check if the session is open before processing the error
+    if (session.isOpen()) {
+        queue.remove(session);
+        
+        // Use static string formatting to avoid unnecessary evaluation
+        String errorMessage = String.format("Connection error: %s", t.toString());
+        logger.error(errorMessage);
+    } else {
+        // Log a warning with a pre-computed message
+        logger.warn("Session is not open. No action taken for error: {}", t.getMessage());
     }
+}
+
 }
