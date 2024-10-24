@@ -65,8 +65,13 @@ public class BBEndpoint {
 
     @OnError
     public void error(Session session, Throwable t) {
-        /* Remove this connection from the queue */
-        queue.remove(session);
-        logger.error("Connection error: {}", t.toString());
+        // Check if the session is still open before removing it
+        if (session.isOpen()) {
+            // Remove this connection from the queue
+            queue.remove(session);
+            logger.error("Connection error: {}", t.toString());
+        } else {
+            logger.warn("Session is not open. No action taken for error: {}", t.toString());
+        }
     }
 }
