@@ -21,6 +21,14 @@ You can also clone the file using the following command.
 git clone https://github.com/Richi025/interactiveblackboardSegurity.git  
 ```
 
+## Configuration
+
+configure the environment variables on your pc, these are found in the application.properties file, with sebartojs13
+
+erver.ssl.key-store-password=${KEY_STORE_PASSWORD}
+
+trust.store.password=${TRUST_STORE_PASSWORD}
+
 ### Previous requirements
 
 It is necessary to have "**Maven**", "**Java**", installed, preferably in their latest versions.
